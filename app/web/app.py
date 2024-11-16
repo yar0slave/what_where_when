@@ -3,13 +3,12 @@ from aiohttp.web import (
 )
 
 from .routes import setup_routes
-
-__all__ = ("Application",)
+from app.store import Store, setup_store
 
 
 class Application(AiohttpApplication):
     config = None
-    store = None
+    store: Store | None = None
     database = None
 
 
@@ -18,4 +17,5 @@ app = Application()
 
 def setup_app(config_path: str) -> Application:
     setup_routes(app)
+    setup_store(app)
     return app
