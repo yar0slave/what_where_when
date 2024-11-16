@@ -13,12 +13,11 @@ logging.basicConfig(
 
 class Worker:
     def __init__(
-            self,
-            token: str,
-            queue: asyncio.Queue,
-            concurrent_workers: int,
+        self,
+        token: str,
+        queue: asyncio.Queue,
+        concurrent_workers: int,
     ):
-
         self.tg_client = TgClient(token)
         self.queue = queue
         self.concurrent_workers = concurrent_workers
