@@ -1,4 +1,5 @@
 import asyncio
+import os
 import typing
 
 if typing.TYPE_CHECKING:
@@ -10,7 +11,7 @@ class Store:
         from app.store.bot.base import Bot
 
         self.app = app
-        self.bots_manager = Bot(token="7261082770:AAEi5vpiQx9LFro1EjZpcsloRsky0NL45eU", n=2)
+        self.bots_manager = Bot(token=os.getenv("token"), n=2)
 
 
 def setup_store(app: "Application"):

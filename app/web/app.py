@@ -15,7 +15,7 @@ class Application(AiohttpApplication):
 app = Application()
 
 
-def setup_app(config_path: str) -> Application:
+def setup_app() -> Application:
     setup_routes(app)
     setup_store(app)
     return app
