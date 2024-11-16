@@ -11,7 +11,7 @@ class Store:
         from app.store.bot.base import Bot
 
         self.app = app
-        self.bots_manager = Bot(token=os.getenv("token"), n=2)
+        self.bots_manager = Bot(token=os.getenv("TOKEN"), n=2)
 
 
 def setup_store(app: "Application"):
@@ -21,15 +21,14 @@ def setup_store(app: "Application"):
         await app.store.bots_manager.start()
 
     async def on_cleanup(app: "Application"):
-        try:
-            await app.store.bots_manager.stop()
-            print("Bots manager cleanup завершен.")
-        except Exception as e:
-            print(f"Ошибка в on_cleanup: {e}")
+        await app.store.bots_manager.stop()
 
-        pending_tasks = [task for task in asyncio.all_tasks() if task is not asyncio.current_task()]
-        for task in pending_tasks:
-            print(f"Ожидаем завершения задачи: {task}")
+        pending_tasks = [
+            task
+            for task in asyncio.all_tasks()
+            if task is not asyncio.current_task()
+        ]
+
         await asyncio.gather(*pending_tasks, return_exceptions=True)
 
     app.on_startup.append(on_startup)

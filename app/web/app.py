@@ -2,8 +2,9 @@ from aiohttp.web import (
     Application as AiohttpApplication,
 )
 
-from .routes import setup_routes
 from app.store import Store, setup_store
+
+from .routes import setup_routes
 
 
 class Application(AiohttpApplication):
