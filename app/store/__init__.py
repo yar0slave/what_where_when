@@ -2,6 +2,8 @@ import asyncio
 import os
 import typing
 
+from app.store.database.sqlalchemy_base import BaseModel
+
 if typing.TYPE_CHECKING:
     from app.web.app import Application
 
@@ -11,7 +13,7 @@ class Store:
         from app.store.bot.base import Bot
 
         self.app = app
-        self.bots_manager = Bot(token=os.getenv("TOKEN"), n=2)
+        self.bots_manager = Bot(app.config.bot.token, n=2)
 
 
 def setup_store(app: "Application"):
