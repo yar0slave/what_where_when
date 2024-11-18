@@ -2,20 +2,21 @@ from aiohttp.web import (
     Application as AiohttpApplication,
 )
 
-from .routes import setup_routes
+from app.store import Store, setup_store
 
-__all__ = ("Application",)
+from .routes import setup_routes
 
 
 class Application(AiohttpApplication):
     config = None
-    store = None
+    store: Store | None = None
     database = None
 
 
 app = Application()
 
 
-def setup_app(config_path: str) -> Application:
+def setup_app() -> Application:
     setup_routes(app)
+    setup_store(app)
     return app
