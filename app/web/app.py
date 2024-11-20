@@ -3,9 +3,10 @@ from aiohttp.web import (
 )
 
 from app.store import Store, setup_store
+from app.web.config import setup_config
 from app.web.logger import setup_logging
+
 from .routes import setup_routes
-from app.web.config import Config, setup_config
 
 
 class Application(AiohttpApplication):

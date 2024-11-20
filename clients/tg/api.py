@@ -33,7 +33,7 @@ class TgClient:
         self, offset: int | None = None, timeout: int = 0
     ) -> GetUpdatesResponse:
         res_dict = await self.get_updates(offset=offset, timeout=timeout)
-        print(res_dict)
+        # print("res_dict", res_dict)
         return GetUpdatesResponse.Schema().load(res_dict)
 
     async def send_message(

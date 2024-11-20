@@ -18,11 +18,13 @@ class Poller:
             )
             for u in res.result:
                 offset = u.update_id + 1
-                try:
-                    asyncio.get_running_loop()
-                except RuntimeError:
-                    return
-                self.queue.put_nowait(u)
+                # Фильтруем только сообщения из групп
+                if u.message and u.message.chat.type in ["group", "supergroup"]:
+                    try:
+                        asyncio.get_running_loop()
+                    except RuntimeError:
+                        return
+                    self.queue.put_nowait(u)
 
     async def start(self):
         self._task = asyncio.create_task(self._worker())

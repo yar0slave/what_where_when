@@ -1,19 +1,21 @@
-
+import logging
 from typing import TYPE_CHECKING, Any
-from sqlalchemy import URL
+
+from sqlalchemy import URL, text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
+    create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
 
-from sqlalchemy.ext.asyncio import create_async_engine
-
-from app.store.database.sqlalchemy_base import BaseModel
+from app.store.database.models import BaseModel
 
 if TYPE_CHECKING:
     from app.web.app import Application
+
+logger = logging.getLogger(__name__)
 
 
 class Database:
@@ -38,14 +40,22 @@ class Database:
                 password=password,
                 host=host,
                 port=port,
-                database=database
+                database=database,
             ),
         )
 
         self.session = async_sessionmaker(
             self.engine,
-            expire_on_commit=False
+            expire_on_commit=False,
         )
 
+        try:
+            async with self.engine.connect() as connection:
+                await connection.execute(text("SELECT 1"))
+                logger.info("Подключение к базе данных установлено.")
+        except Exception as e:
+            logger.error("Ошибка подключения к базе данных: %s", e)
+
     async def disconnect(self, *args: Any, **kwargs: Any) -> None:
-        await self.session().close()
+        if self.session:
+            await self.session().close()

@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import logging
 
 from clients.tg import TgClient
@@ -16,17 +15,19 @@ class Worker:
         self,
         token: str,
         queue: asyncio.Queue,
-        concurrent_workers: int,
     ):
         self.tg_client = TgClient(token)
         self.queue = queue
-        self.concurrent_workers = concurrent_workers
         self._tasks: list[asyncio.Task] = []
 
     async def handle_update(self, upd: UpdateObj):
-        logging.info("before %s %s", upd.message.text, datetime.datetime.now())
-        logging.info("after %s %s", upd.message.text, datetime.datetime.now())
-        await self.tg_client.send_message(upd.message.chat.id, upd.message.text)
+        if upd.message:
+            logging.info("Processing message: %s", upd.message.text)
+            await self.tg_client.send_message(
+                upd.message.chat.id, f"Вы написали: {upd.message.text}"
+            )
+        else:
+            logging.warning("Пропущено обновление без сообщения: %s", upd)
 
     async def _worker(self):
         try:
@@ -41,10 +42,7 @@ class Worker:
             raise
 
     async def start(self):
-        self._tasks = [
-            asyncio.create_task(self._worker())
-            for _ in range(self.concurrent_workers)
-        ]
+        self._tasks = [asyncio.create_task(self._worker())]
 
     async def stop(self):
         await self.queue.join()  # Ждем, пока очередь будет обработана
