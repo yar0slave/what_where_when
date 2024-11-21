@@ -41,9 +41,22 @@ class Message:
 
 
 @dataclass
+class MyChatMember:
+    chat: Chat
+    from_: MessageFrom = field(metadata={"data_key": "from"})
+    date: int
+    old_chat_member: dict
+    new_chat_member: dict
+
+    class Meta:
+        unknown = EXCLUDE
+
+
+@dataclass
 class UpdateObj:
     update_id: int
-    message: Message
+    message: Message | None = None
+    my_chat_member: MyChatMember | None = None
 
     class Meta:
         unknown = EXCLUDE
