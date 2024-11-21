@@ -3,7 +3,6 @@ import logging
 
 from clients.tg import TgClient
 from clients.tg.dcs import UpdateObj
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -12,9 +11,9 @@ logging.basicConfig(
 
 class Worker:
     def __init__(
-        self,
-        token: str,
-        queue: asyncio.Queue,
+            self,
+            token: str,
+            queue: asyncio.Queue,
     ):
         self.tg_client = TgClient(token)
         self.queue = queue
@@ -22,10 +21,21 @@ class Worker:
 
     async def handle_update(self, upd: UpdateObj):
         if upd.message:
-            logging.info("Processing message: %s", upd.message.text)
-            await self.tg_client.send_message(
-                upd.message.chat.id, f"Вы написали: {upd.message.text}"
-            )
+            text = upd.message.text
+            chat_id = upd.message.chat.id
+            if text == "/start":
+                if upd.message.chat.type in ["group", "supergroup"]:
+                    members = await self.tg_client.get_group_members(chat_id)
+                    members_text = "\n".join(members)
+
+                    await self.tg_client.send_message(
+                        chat_id, f"Участники группы:\n{members_text}"
+                    )
+            else:
+                logging.info("Processing message: %s", text)
+                await self.tg_client.send_message(
+                    chat_id, f"написали: {text}"
+                )
         else:
             logging.warning("Пропущено обновление без сообщения: %s", upd)
 

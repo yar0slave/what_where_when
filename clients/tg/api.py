@@ -17,7 +17,7 @@ class TgClient:
                 return await resp.json()
 
     async def get_updates(
-        self, offset: int | None = None, timeout: int = 0
+            self, offset: int | None = None, timeout: int = 0
     ) -> dict:
         url = self.get_url("getUpdates")
         params = {}
@@ -30,13 +30,14 @@ class TgClient:
                 return await resp.json()
 
     async def get_updates_in_objects(
-        self, offset: int | None = None, timeout: int = 0
+            self, offset: int | None = None, timeout: int = 0
     ) -> GetUpdatesResponse:
         res_dict = await self.get_updates(offset=offset, timeout=timeout)
+        print("res_dict", res_dict)
         return GetUpdatesResponse.Schema().load(res_dict)
 
     async def send_message(
-        self, chat_id: int, text: str
+            self, chat_id: int, text: str
     ) -> SendMessageResponse:
         url = self.get_url("sendMessage")
         payload = {
@@ -47,3 +48,24 @@ class TgClient:
             async with session.post(url, json=payload) as resp:
                 res_dict = await resp.json()
                 return SendMessageResponse.Schema().load(res_dict)
+
+    async def get_bot_username(self) -> str:
+        bot_info = await self.get_me()
+        print("bot_info", bot_info)
+        return bot_info.get("result", "").get("username", "")
+
+    async def get_group_members(self, chat_id: int) -> list[str]:
+        members = []
+        bot_username = await self.get_bot_username()
+        async with aiohttp.ClientSession() as session:
+            url = self.get_url("getChatAdministrators")
+            params = {"chat_id": chat_id}
+            async with session.get(url, params=params) as resp:
+                data = await resp.json()
+                for member in data.get("result", []):
+                    user = member["user"]
+                    username = user.get("username")
+                    if username != bot_username:
+                        members.append(username)
+
+        return members
