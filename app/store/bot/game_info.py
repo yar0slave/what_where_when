@@ -13,10 +13,7 @@ class Question:
 
 class Statistics:
     def __init__(
-        self,
-        participants: dict[int, Player | None],
-        tg_client,
-        chat_id: int
+        self, participants: dict[int, Player | None], tg_client, chat_id: int
     ):
         self.participants = participants
         self.captain: str | None = None
@@ -32,25 +29,18 @@ class Statistics:
         self.current_round = 0
         self.round_complete = asyncio.Event()  # Для синхронизации раундов
         self.questions = [
-            Question(
-                "Что находится между Землей и Солнцем?",
-                "и"
-            ),
+            Question("Что находится между Землей и Солнцем?", "и"),
             Question(
                 "Какое слово начинается с буквы К и обозначает вид транспорта?",
-                "корабль"
+                "корабль",
             ),
-            Question(
-                "В каком году произошло крещение Руси?",
-                "988"
-            ),
+            Question("В каком году произошло крещение Руси?", "988"),
             Question(
                 "Назовите самую маленькую планету Солнечной системы.",
-                "меркурий"
+                "меркурий",
             ),
             Question(
-                "Какой химический элемент обозначается символом Au?",
-                "золото"
+                "Какой химический элемент обозначается символом Au?", "золото"
             ),
         ]
 
@@ -80,7 +70,7 @@ class Statistics:
         await asyncio.sleep(5)
         await self.tg_client.send_message(
             self.chat_id,
-            "🎲 Игра начинается! Приготовьтесь к первому вопросу..."
+            "🎲 Игра начинается! Приготовьтесь к первому вопросу...",
         )
 
     async def play_round(self, round_number: int):
@@ -90,7 +80,7 @@ class Statistics:
         if not self.questions:
             await self.tg_client.send_message(
                 self.chat_id,
-                "❌ Закончились вопросы! Игра завершается досрочно."
+                "❌ Закончились вопросы! Игра завершается досрочно.",
             )
             self.round_complete.set()
             return False
@@ -107,15 +97,14 @@ class Statistics:
 
         await asyncio.sleep(self.discussion_time - 10)
         await self.tg_client.send_message(
-            self.chat_id,
-            "⚠️ 10 секунд до окончания обсуждения!"
+            self.chat_id, "⚠️ 10 секунд до окончания обсуждения!"
         )
         await asyncio.sleep(10)
 
         await self.tg_client.send_message(
             self.chat_id,
             f"👑 @{self.captain}, "
-            f"выберите отвечающего командой /choose @username"
+            f"выберите отвечающего командой /choose @username",
         )
 
         self.is_accepting_answer = False
@@ -134,13 +123,12 @@ class Statistics:
                 for player in self.participants.values()
                 if player.username == chosen_username
             ),
-            None
+            None,
         )
 
         if not chosen_player:
             await self.tg_client.send_message(
-                self.chat_id,
-                "❌ Выбранный игрок не участвует в игре!"
+                self.chat_id, "❌ Выбранный игрок не участвует в игре!"
             )
             return False
 
@@ -150,7 +138,7 @@ class Statistics:
         await self.tg_client.send_message(
             self.chat_id,
             f"🎯 @{chosen_username}, ваш ответ?"
-            f" Формат ответа: /answer ваш_ответ"
+            f" Формат ответа: /answer ваш_ответ",
         )
         return True
 
@@ -160,31 +148,31 @@ class Statistics:
 
         if username != self.answering_player:
             await self.tg_client.send_message(
-                self.chat_id,
-                "❌ Сейчас не ваша очередь отвечать!"
+                self.chat_id, "❌ Сейчас не ваша очередь отвечать!"
             )
             return False
 
         self.is_accepting_answer = False
 
-        if (answer.lower().strip() ==
-                self.current_question.answer.lower().strip()):
+        if (
+            answer.lower().strip()
+            == self.current_question.answer.lower().strip()
+        ):
             self.score_team += 1
             await self.tg_client.send_message(
-                self.chat_id,
-                "✅ Правильный ответ! Команда получает балл."
+                self.chat_id, "✅ Правильный ответ! Команда получает балл."
             )
         else:
             self.score_bot += 1
             await self.tg_client.send_message(
                 self.chat_id,
                 f"❌ Неправильно!"
-                f" Правильный ответ: {self.current_question.answer}"
+                f" Правильный ответ: {self.current_question.answer}",
             )
 
         await self.tg_client.send_message(
             self.chat_id,
-            f"📊 Счет: Команда {self.score_team} - {self.score_bot} Бот"
+            f"📊 Счет: Команда {self.score_team} - {self.score_bot} Бот",
         )
 
         self.round_complete.set()

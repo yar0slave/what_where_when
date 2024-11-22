@@ -33,6 +33,63 @@ class Worker:
             await game.finish_game()
             del self.games[chat_id]
 
+    async def handle_start(self, chat_id: int):
+        if chat_id in self.registrations or chat_id in self.games:
+            await self.tg_client.send_message(
+                chat_id, "❌ Игра уже в процессе регистрации или идет"
+            )
+            return
+
+        self.registrations[chat_id] = GameRegistration(self.tg_client, chat_id)
+        await self.registrations[chat_id].start_registration()
+
+    async def handle_join(self, chat_id: int, user_id: int, username: str):
+        if chat_id in self.registrations:
+            await self.registrations[chat_id].add_player(user_id, username)
+
+    async def handle_finish_reg(self, chat_id: int):
+        if (
+            chat_id in self.registrations
+            and await self.registrations[chat_id].finish_registration()
+        ):
+            members = self.registrations[chat_id].get_players()
+            self.games[chat_id] = Statistics(members, self.tg_client, chat_id)
+            await self.games[chat_id].start_game()
+            del self.registrations[chat_id]
+
+            task = asyncio.create_task(self.start_game_rounds(chat_id))
+            self._tasks.append(task)
+
+    async def handle_choose(self, chat_id: int, username: str, text: str):
+        game = self.games[chat_id]
+
+        if username != game.captain:
+            await self.tg_client.send_message(
+                chat_id, "❌ Только капитан может выбирать отвечающего!"
+            )
+            return
+
+        chosen_player = text.split("/choose ", 1)[1].strip().lstrip("@")
+        await game.handle_captain_choice(chosen_player)
+
+    async def handle_answer(self, chat_id: int, username: str, text: str):
+        game = self.games[chat_id]
+        answer = text.split("/answer ", 1)[1].strip()
+        await game.handle_answer(username, answer)
+
+    async def handle_help(self, chat_id: int):
+        help_text = (
+            "📜 Доступные команды:\n\n"
+            "🎮 Начало игры:\n"
+            "/start - начать регистрацию\n"
+            "/join - присоединиться к игре\n"
+            "/finish_reg - закончить регистрацию\n\n"
+            "🎯 Во время игры:\n"
+            "/choose @username - выбрать отвечающего (только для капитана)\n"
+            "/answer текст - дать ответ на вопрос"
+        )
+        await self.tg_client.send_message(chat_id, help_text)
+
     async def handle_update(self, upd: UpdateObj):
         if not upd.message or not upd.message.text:
             return
@@ -43,58 +100,17 @@ class Worker:
         username = upd.message.from_.username
 
         if text == "/start":
-            if chat_id in self.registrations or chat_id in self.games:
-                await self.tg_client.send_message(
-                    chat_id, "❌ Игра уже в процессе регистрации или идет"
-                )
-                return
-
-            self.registrations[chat_id] = GameRegistration(self.tg_client, chat_id)
-            await self.registrations[chat_id].start_registration()
-
-        elif text == "/join" and chat_id in self.registrations:
-            await self.registrations[chat_id].add_player(user_id, username)
-
-        elif text == "/finish_reg" and chat_id in self.registrations:
-            if await self.registrations[chat_id].finish_registration():
-                members = self.registrations[chat_id].get_players()
-                self.games[chat_id] = Statistics(members, self.tg_client, chat_id)
-                await self.games[chat_id].start_game()
-                del self.registrations[chat_id]
-
-                # Запускаем раунды в отдельной таске
-                task = asyncio.create_task(self.start_game_rounds(chat_id))
-                self._tasks.append(task)
-
+            await self.handle_start(chat_id)
+        elif text == "/join":
+            await self.handle_join(chat_id, user_id, username)
+        elif text == "/finish_reg":
+            await self.handle_finish_reg(chat_id)
         elif text.startswith("/choose ") and chat_id in self.games:
-            game = self.games[chat_id]
-
-            if username != game.captain:
-                await self.tg_client.send_message(
-                    chat_id, "❌ Только капитан может выбирать отвечающего!"
-                )
-                return
-
-            chosen_player = text.split("/choose ", 1)[1].strip().lstrip("@")
-            await game.handle_captain_choice(chosen_player)
-
+            await self.handle_choose(chat_id, username, text)
         elif text.startswith("/answer ") and chat_id in self.games:
-            game = self.games[chat_id]
-            answer = text.split("/answer ", 1)[1].strip()
-            await game.handle_answer(username, answer)
-
+            await self.handle_answer(chat_id, username, text)
         elif text == "/help":
-            help_text = (
-                "📜 Доступные команды:\n\n"
-                "🎮 Начало игры:\n"
-                "/start - начать регистрацию\n"
-                "/join - присоединиться к игре\n"
-                "/finish_reg - закончить регистрацию\n\n"
-                "🎯 Во время игры:\n"
-                "/choose @username - выбрать отвечающего (только для капитана)\n"
-                "/answer текст - дать ответ на вопрос"
-            )
-            await self.tg_client.send_message(chat_id, help_text)
+            await self.handle_help(chat_id)
 
     async def _worker(self):
         try:
