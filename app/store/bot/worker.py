@@ -2,6 +2,11 @@ import asyncio
 import logging
 
 from app.store.bot.game_info import Statistics
+from app.store.bot.messages import (
+    GAME_IN_PROGRESS_TEXT,
+    HELP_TEXT,
+    ONLY_CAPTAIN_TEXT,
+)
 from app.store.bot.registration import GameRegistration
 from clients.tg import TgClient
 from clients.tg.dcs import UpdateObj
@@ -35,9 +40,7 @@ class Worker:
 
     async def handle_start(self, chat_id: int):
         if chat_id in self.registrations or chat_id in self.games:
-            await self.tg_client.send_message(
-                chat_id, "❌ Игра уже в процессе регистрации или идет"
-            )
+            await self.tg_client.send_message(chat_id, GAME_IN_PROGRESS_TEXT)
             return
 
         self.registrations[chat_id] = GameRegistration(self.tg_client, chat_id)
@@ -64,9 +67,7 @@ class Worker:
         game = self.games[chat_id]
 
         if username != game.captain:
-            await self.tg_client.send_message(
-                chat_id, "❌ Только капитан может выбирать отвечающего!"
-            )
+            await self.tg_client.send_message(chat_id, ONLY_CAPTAIN_TEXT)
             return
 
         chosen_player = text.split("/choose ", 1)[1].strip().lstrip("@")
@@ -78,17 +79,7 @@ class Worker:
         await game.handle_answer(username, answer)
 
     async def handle_help(self, chat_id: int):
-        help_text = (
-            "📜 Доступные команды:\n\n"
-            "🎮 Начало игры:\n"
-            "/start - начать регистрацию\n"
-            "/join - присоединиться к игре\n"
-            "/finish_reg - закончить регистрацию\n\n"
-            "🎯 Во время игры:\n"
-            "/choose @username - выбрать отвечающего (только для капитана)\n"
-            "/answer текст - дать ответ на вопрос"
-        )
-        await self.tg_client.send_message(chat_id, help_text)
+        await self.tg_client.send_message(chat_id, HELP_TEXT)
 
     async def handle_update(self, upd: UpdateObj):
         if not upd.message or not upd.message.text:

@@ -1,12 +1,15 @@
 import random
-from dataclasses import dataclass
 
-
-@dataclass
-class Player:
-    username: str
-    user_id: int
-    is_captain: bool = False
+from app.store.bot.dataclasses import Player
+from app.store.bot.messages import (
+    ALREADY_REGISTERED_TEXT,
+    MAX_PLAYERS_REACHED_TEXT,
+    PLAYER_REGISTERED_TEXT,
+    REGISTRATION_ALREADY_CLOSED_TEXT,
+    REGISTRATION_CLOSED_TEXT,
+    REGISTRATION_FINISHED_TEXT,
+    REGISTRATION_START_TEXT,
+)
 
 
 class GameRegistration:
@@ -20,13 +23,7 @@ class GameRegistration:
     async def start_registration(self):
         self.registration_open = True
         self.players.clear()
-        message = (
-            "🎮 Начинается регистрация на игру «Что? Где? Когда?»\n\n"
-            "📝 Чтобы присоединиться к игре, отправьте команду /join\n"
-            f"ℹ️ Требуется до {self.max_players} игроков\n"
-            "❌ Для завершения регистрации"
-            " администратор может отправить /finish_reg"
-        )
+        message = REGISTRATION_START_TEXT.format(max_players=self.max_players)
         await self.tg_client.send_message(self.chat_id, message)
 
     async def add_player(
@@ -34,19 +31,19 @@ class GameRegistration:
     ) -> bool:
         if not self.registration_open:
             await self.tg_client.send_message(
-                self.chat_id, "❌ Регистрация сейчас закрыта"
+                self.chat_id, REGISTRATION_CLOSED_TEXT
             )
             return False
 
         if len(self.players) >= self.max_players:
             await self.tg_client.send_message(
-                self.chat_id, "❌ Достигнуто максимальное количество игроков"
+                self.chat_id, MAX_PLAYERS_REACHED_TEXT
             )
             return False
 
         if user_id in self.players:
             await self.tg_client.send_message(
-                self.chat_id, "❌ Вы уже зарегистрированы"
+                self.chat_id, ALREADY_REGISTERED_TEXT
             )
             return False
 
@@ -56,9 +53,10 @@ class GameRegistration:
 
         await self.tg_client.send_message(
             self.chat_id,
-            (
-                f"✅ @{username} зарегистрирован!\n"
-                f"👥 Количество игроков: {len(self.players)}/{self.max_players}"
+            PLAYER_REGISTERED_TEXT.format(
+                username=username,
+                current_players=len(self.players),
+                max_players=self.max_players,
             ),
         )
         return True
@@ -66,14 +64,13 @@ class GameRegistration:
     async def finish_registration(self) -> bool:
         if not self.registration_open:
             await self.tg_client.send_message(
-                self.chat_id, "❌ Регистрация уже закрыта"
+                self.chat_id, REGISTRATION_ALREADY_CLOSED_TEXT
             )
             return False
 
         self.registration_open = False
 
         captain = random.choice(list(self.players.keys()))
-
         self.players[captain].is_captain = True
 
         players_list = [
@@ -83,12 +80,9 @@ class GameRegistration:
             )
             for player in self.players.values()
         ]
-
-        final_message = (
-            "✅ Регистрация завершена!\n\n"
-            "Состав команды:\n"
-            + "\n".join(players_list)
-            + f"\n\nВсего игроков: {len(self.players)}"
+        final_message = REGISTRATION_FINISHED_TEXT.format(
+            players_list="\n".join(players_list),
+            total_players=len(self.players),
         )
 
         await self.tg_client.send_message(self.chat_id, final_message)

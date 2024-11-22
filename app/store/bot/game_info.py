@@ -1,14 +1,25 @@
 import asyncio
 import random
-from dataclasses import dataclass
 
-from app.store.bot.registration import Player
-
-
-@dataclass
-class Question:
-    text: str
-    answer: str
+from app.store.bot.dataclasses import Player, Question
+from app.store.bot.messages import (
+    CAPTAIN_NOT_FOUND_TEXT,
+    CHOOSE_PLAYER_TEXT,
+    CORRECT_ANSWER_TEXT,
+    DISCUSSION_WARNING_TEXT,
+    FINAL_DRAW_TEXT,
+    FINAL_LOSE_TEXT,
+    FINAL_WIN_TEXT,
+    NOT_YOUR_TURN_TEXT,
+    PLAYER_ANSWER_PROMPT,
+    PLAYER_NOT_FOUND_TEXT,
+    QUESTIONS_EMPTY_TEXT,
+    ROUND_ANNOUNCEMENT_TEMPLATE,
+    RULES_TEXT,
+    SCORE_TEXT,
+    START_TEXT,
+    WRONG_ANSWER_TEXT,
+)
 
 
 class Statistics:
@@ -48,30 +59,14 @@ class Statistics:
         for player in self.participants.values():
             if player.is_captain:
                 return player.username
-        return "Капитан не найден"
+        return CAPTAIN_NOT_FOUND_TEXT
 
     async def start_game(self):
         self.captain = await self.get_captain()
-        rules = (
-            "🎮 Правила игры «Что? Где? Когда?»:\n\n"
-            "1️⃣ Игра состоит из 5 раундов\n"
-            "2️⃣ В каждом раунде команде задается вопрос\n"
-            "3️⃣ У команды есть 1 минута на обсуждение\n"
-            "4️⃣ После обсуждения капитан выбирает отвечающего командой "
-            "/choose @username\n"
-            "5️⃣ У выбранного игрока есть 20 секунд на ответ\n"
-            "6️⃣ За правильный ответ команда получает 1 балл\n"
-            "7️⃣ За неправильный ответ или отсутствие "
-            "ответа балл получает бот\n\n"
-            f"👑 Капитан команды: @{self.captain}\n"
-            f"🎯 Количество раундов: {self.rounds}"
-        )
+        rules = RULES_TEXT.format(captain=self.captain, rounds=self.rounds)
         await self.tg_client.send_message(self.chat_id, rules)
         await asyncio.sleep(5)
-        await self.tg_client.send_message(
-            self.chat_id,
-            "🎲 Игра начинается! Приготовьтесь к первому вопросу...",
-        )
+        await self.tg_client.send_message(self.chat_id, START_TEXT)
 
     async def play_round(self, round_number: int):
         self.round_complete.clear()
@@ -79,8 +74,7 @@ class Statistics:
 
         if not self.questions:
             await self.tg_client.send_message(
-                self.chat_id,
-                "❌ Закончились вопросы! Игра завершается досрочно.",
+                self.chat_id, QUESTIONS_EMPTY_TEXT
             )
             self.round_complete.set()
             return False
@@ -88,23 +82,20 @@ class Statistics:
         self.current_question = random.choice(self.questions)
         self.questions.remove(self.current_question)
 
-        round_announcement = (
-            f"🎯 Раунд {round_number}\n"
-            f"💭 Вопрос: {self.current_question.text}\n\n"
-            f"⏳ Время на обсуждение: {self.discussion_time} секунд"
+        round_announcement = ROUND_ANNOUNCEMENT_TEMPLATE.format(
+            round_number=round_number,
+            question_text=self.current_question.text,
+            discussion_time=self.discussion_time,
         )
         await self.tg_client.send_message(self.chat_id, round_announcement)
 
         await asyncio.sleep(self.discussion_time - 10)
-        await self.tg_client.send_message(
-            self.chat_id, "⚠️ 10 секунд до окончания обсуждения!"
-        )
+        await self.tg_client.send_message(self.chat_id, DISCUSSION_WARNING_TEXT)
         await asyncio.sleep(10)
 
         await self.tg_client.send_message(
             self.chat_id,
-            f"👑 @{self.captain}, "
-            f"выберите отвечающего командой /choose @username",
+            CHOOSE_PLAYER_TEXT.format(captain=self.captain),
         )
 
         self.is_accepting_answer = False
@@ -128,7 +119,7 @@ class Statistics:
 
         if not chosen_player:
             await self.tg_client.send_message(
-                self.chat_id, "❌ Выбранный игрок не участвует в игре!"
+                self.chat_id, PLAYER_NOT_FOUND_TEXT
             )
             return False
 
@@ -137,8 +128,7 @@ class Statistics:
 
         await self.tg_client.send_message(
             self.chat_id,
-            f"🎯 @{chosen_username}, ваш ответ?"
-            f" Формат ответа: /answer ваш_ответ",
+            PLAYER_ANSWER_PROMPT.format(player=chosen_username),
         )
         return True
 
@@ -147,9 +137,7 @@ class Statistics:
             return False
 
         if username != self.answering_player:
-            await self.tg_client.send_message(
-                self.chat_id, "❌ Сейчас не ваша очередь отвечать!"
-            )
+            await self.tg_client.send_message(self.chat_id, NOT_YOUR_TURN_TEXT)
             return False
 
         self.is_accepting_answer = False
@@ -159,42 +147,38 @@ class Statistics:
             == self.current_question.answer.lower().strip()
         ):
             self.score_team += 1
-            await self.tg_client.send_message(
-                self.chat_id, "✅ Правильный ответ! Команда получает балл."
-            )
+            await self.tg_client.send_message(self.chat_id, CORRECT_ANSWER_TEXT)
         else:
             self.score_bot += 1
             await self.tg_client.send_message(
                 self.chat_id,
-                f"❌ Неправильно!"
-                f" Правильный ответ: {self.current_question.answer}",
+                WRONG_ANSWER_TEXT.format(
+                    correct_answer=self.current_question.answer
+                ),
             )
 
         await self.tg_client.send_message(
             self.chat_id,
-            f"📊 Счет: Команда {self.score_team} - {self.score_bot} Бот",
+            SCORE_TEXT.format(
+                team_score=self.score_team, bot_score=self.score_bot
+            ),
         )
 
         self.round_complete.set()
         return True
 
     async def finish_game(self):
-        final_message = "🏁 Игра окончена!\n\n"
-
         if self.score_team > self.score_bot:
-            final_message += (
-                "🏆 Поздравляем! Команда знатоков победила!\n"
-                f"Финальный счет: {self.score_team} - {self.score_bot}"
+            final_message = FINAL_WIN_TEXT.format(
+                team_score=self.score_team, bot_score=self.score_bot
             )
         elif self.score_team < self.score_bot:
-            final_message += (
-                "😔 Команда знатоков проиграла.\n"
-                f"Финальный счет: {self.score_team} - {self.score_bot}"
+            final_message = FINAL_LOSE_TEXT.format(
+                team_score=self.score_team, bot_score=self.score_bot
             )
         else:
-            final_message += (
-                "🤝 Ничья! Отличная игра!\n"
-                f"Финальный счет: {self.score_team} - {self.score_bot}"
+            final_message = FINAL_DRAW_TEXT.format(
+                team_score=self.score_team, bot_score=self.score_bot
             )
 
         await self.tg_client.send_message(self.chat_id, final_message)

@@ -50,7 +50,7 @@ class TgClient:
 
     async def get_bot_username(self) -> str:
         bot_info = await self.get_me()
-        return bot_info.get("result", "").get("username", "")
+        return bot_info.get("result", {}).get("username", "")
 
     async def get_group_members(self, chat_id: int) -> list[str]:
         members = []
