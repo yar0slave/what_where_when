@@ -47,3 +47,23 @@ class TgClient:
             async with session.post(url, json=payload) as resp:
                 res_dict = await resp.json()
                 return SendMessageResponse.Schema().load(res_dict)
+
+    async def get_bot_username(self) -> str:
+        bot_info = await self.get_me()
+        return bot_info.get("result", {}).get("username", "")
+
+    async def get_group_members(self, chat_id: int) -> list[str]:
+        members = []
+        bot_username = await self.get_bot_username()
+        async with aiohttp.ClientSession() as session:
+            url = self.get_url("getChatAdministrators")
+            params = {"chat_id": chat_id}
+            async with session.get(url, params=params) as resp:
+                data = await resp.json()
+                for member in data.get("result", []):
+                    user = member["user"]
+                    username = user.get("username")
+                    if username != bot_username:
+                        members.append(username)
+
+        return members

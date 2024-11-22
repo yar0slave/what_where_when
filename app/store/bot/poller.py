@@ -18,7 +18,6 @@ class Poller:
             )
             for u in res.result:
                 offset = u.update_id + 1
-                # Фильтруем только сообщения из групп
                 if u.message and u.message.chat.type in ["group", "supergroup"]:
                     try:
                         asyncio.get_running_loop()
