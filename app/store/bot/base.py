@@ -6,6 +6,7 @@ from app.store.bot.worker import Worker
 if typing.TYPE_CHECKING:
     from app.web.app import Application
 
+
 class Bot:
     def __init__(self, token: str, app: "Application"):
         self.queue = asyncio.Queue()

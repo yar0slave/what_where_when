@@ -13,10 +13,12 @@ class Store:
         from app.store.bot.base import Bot
         from app.store.bot.accessor import UserAccessor
         from app.store.bot.accessor import GameAccessor
+        from app.store.bot.accessor import QuizAccessor
 
         self.app = app
         self.users = UserAccessor(app)
         self.creategame = GameAccessor(app)
+        self.quiz = QuizAccessor(app)
         self.bots_manager = Bot(app.config.bot.token, app)
 
 
