@@ -1,6 +1,7 @@
 import asyncio
 import typing
 
+
 from app.store.database import Database
 
 if typing.TYPE_CHECKING:
@@ -10,9 +11,13 @@ if typing.TYPE_CHECKING:
 class Store:
     def __init__(self, app: "Application"):
         from app.store.bot.base import Bot
+        from app.store.bot.accessor import UserAccessor
+        from app.store.bot.accessor import GameAccessor
 
         self.app = app
-        self.bots_manager = Bot(app.config.bot.token)
+        self.users = UserAccessor(app)
+        self.creategame = GameAccessor(app)
+        self.bots_manager = Bot(app.config.bot.token, app)
 
 
 def setup_store(app: "Application"):

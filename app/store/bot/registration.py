@@ -1,5 +1,8 @@
 import random
+import typing
 
+if typing.TYPE_CHECKING:
+    from app.web.app import Application
 from app.store.bot.dataclasses import Player
 from app.store.bot.messages import (
     ALREADY_REGISTERED_TEXT,
@@ -13,8 +16,9 @@ from app.store.bot.messages import (
 
 
 class GameRegistration:
-    def __init__(self, tg_client, chat_id: int):
+    def __init__(self, tg_client, chat_id: int, app: "Application"):
         self.tg_client = tg_client
+        self.app = app
         self.chat_id = chat_id
         self.players: dict[int, Player] = {}
         self.registration_open = False
@@ -27,28 +31,32 @@ class GameRegistration:
         await self.tg_client.send_message(self.chat_id, message)
 
     async def add_player(
-        self, user_id: int, username: str, is_captain: bool = False
+            self, user_id: int, username: str
     ) -> bool:
+
+        players = await self.app.store.users.get_users_by_chat_id(self.chat_id)
         if not self.registration_open:
             await self.tg_client.send_message(
                 self.chat_id, REGISTRATION_CLOSED_TEXT
             )
             return False
 
-        if len(self.players) >= self.max_players:
+        if len(players) >= self.max_players:
             await self.tg_client.send_message(
                 self.chat_id, MAX_PLAYERS_REACHED_TEXT
             )
             return False
 
-        if user_id in self.players:
+        if username in players:
             await self.tg_client.send_message(
                 self.chat_id, ALREADY_REGISTERED_TEXT
             )
             return False
 
+        await self.app.store.users.join_user(user_id, username, self.chat_id)
+
         self.players[user_id] = Player(
-            username=username, user_id=user_id, is_captain=is_captain
+            username=username, user_id=user_id, is_captain=False
         )
 
         await self.tg_client.send_message(

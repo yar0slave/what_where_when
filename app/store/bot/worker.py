@@ -1,6 +1,9 @@
 import asyncio
 import logging
+import typing
 
+if typing.TYPE_CHECKING:
+    from app.web.app import Application
 from app.store.bot.game_info import Statistics
 from app.store.bot.messages import (
     GAME_IN_PROGRESS_TEXT,
@@ -18,8 +21,9 @@ logging.basicConfig(
 
 
 class Worker:
-    def __init__(self, token: str, queue: asyncio.Queue):
+    def __init__(self, token: str, queue: asyncio.Queue, app: "Application"):
         self.tg_client = TgClient(token)
+        self.app = app
         self.queue = queue
         self._tasks: list[asyncio.Task] = []
         self.games: dict[int, Statistics] = {}
@@ -42,8 +46,11 @@ class Worker:
         if chat_id in self.registrations or chat_id in self.games:
             await self.tg_client.send_message(chat_id, GAME_IN_PROGRESS_TEXT)
             return
-
-        self.registrations[chat_id] = GameRegistration(self.tg_client, chat_id)
+        await self.app.store.creategame.delete_game_and_users_by_chat_id(chat_id)
+        await self.app.store.creategame.create_or_update_game(
+            code_of_chat=chat_id
+        )
+        self.registrations[chat_id] = GameRegistration(self.tg_client, chat_id, self.app)
         await self.registrations[chat_id].start_registration()
 
     async def handle_join(self, chat_id: int, user_id: int, username: str):
@@ -51,9 +58,8 @@ class Worker:
             await self.registrations[chat_id].add_player(user_id, username)
 
     async def handle_finish_reg(self, chat_id: int):
-        if (
-            chat_id in self.registrations
-            and await self.registrations[chat_id].finish_registration()
+        codes_of_chat = await self.app.store.creategame.get_all_code_of_chat(chat_id)
+        if (chat_id in codes_of_chat and not (await self.app.store.creategame.is_captain_set(chat_id)) and await self.registrations[chat_id].finish_registration()
         ):
             members = self.registrations[chat_id].get_players()
             self.games[chat_id] = Statistics(members, self.tg_client, chat_id)
