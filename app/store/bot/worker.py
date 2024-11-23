@@ -9,6 +9,8 @@ from app.store.bot.messages import (
     GAME_IN_PROGRESS_TEXT,
     HELP_TEXT,
     ONLY_CAPTAIN_TEXT,
+    REGISTRATION_CLOSED_TEXT,
+    STATISTICS_TEXT,
 )
 from app.store.bot.registration import GameRegistration
 from clients.tg import TgClient
@@ -42,12 +44,16 @@ class Worker:
 
     async def handle_start(self, chat_id: int):
         codes = await self.app.store.creategame.get_all_code_of_chat()
-        if chat_id in codes:
+        if chat_id in codes and await self.app.store.creategame.is_game_working(
+            chat_id
+        ):
             await self.tg_client.send_message(chat_id, GAME_IN_PROGRESS_TEXT)
             return
-        await self.app.store.creategame.delete_game_and_users_by_chat_id(chat_id)
+        await self.app.store.creategame.clear_game_users_and_asked_questions(
+            chat_id
+        )
         await self.app.store.creategame.create_or_update_game(
-            code_of_chat=chat_id
+            code_of_chat=chat_id, is_working=1
         )
         self.game = GameRegistration(self.tg_client, chat_id, self.app)
         await self.game.start_registration()
@@ -55,12 +61,21 @@ class Worker:
     async def handle_join(self, chat_id: int, user_id: int, username: str):
         codes = await self.app.store.creategame.get_all_code_of_chat()
         if chat_id in codes:
+            captain = await self.app.store.creategame.is_captain_set(chat_id)
+            if captain:
+                await self.tg_client.send_message(
+                    chat_id, GAME_IN_PROGRESS_TEXT
+                )
+                return
+
             await self.game.add_player(user_id, username)
 
     async def handle_finish_reg(self, chat_id: int):
         codes_of_chat = await self.app.store.creategame.get_all_code_of_chat()
-        if (chat_id in codes_of_chat and not (
-        await self.app.store.creategame.is_captain_set(chat_id)) and await self.game.finish_registration()
+        if (
+            chat_id in codes_of_chat
+            and not (await self.app.store.creategame.is_captain_set(chat_id))
+            and await self.game.finish_registration()
         ):
             self.game = Statistics(self.tg_client, chat_id, self.app)
             await self.game.start_game()
@@ -71,28 +86,17 @@ class Worker:
     async def handle_choose(self, chat_id: int, username: str, text: str):
         captain = await self.app.store.creategame.is_captain_set(chat_id)
 
-        if not captain:
-            await self.tg_client.send_message(chat_id, "No active game with a captain found.")
-            return
-
         if username != captain:
             await self.tg_client.send_message(chat_id, ONLY_CAPTAIN_TEXT)
             return
 
         if not self.game:
-            await self.tg_client.send_message(chat_id, "No active game session found. Please start a new game.")
-            return
-
-        if not hasattr(self.game, 'handle_captain_choice'):
-            await self.tg_client.send_message(chat_id, "Game is not in the correct state for captain choices.")
+            await self.tg_client.send_message(chat_id, REGISTRATION_CLOSED_TEXT)
             return
 
         chosen_player = text.split("/choose ", 1)[1].strip().lstrip("@")
-        try:
-            await self.game.handle_captain_choice(chosen_player)
-        except Exception as e:
-            logging.error(f"Error handling captain choice: {e}")
-            await self.tg_client.send_message(chat_id, "An error occurred while processing your choice. Please try again.")
+
+        await self.game.handle_captain_choice(chosen_player)
 
     async def handle_update(self, upd: UpdateObj):
         if not upd.message or not upd.message.text:
@@ -103,27 +107,22 @@ class Worker:
         user_id = upd.message.from_.id
         username = upd.message.from_.username
 
-        try:
-            codes_of_chat = await self.app.store.creategame.get_all_code_of_chat()
+        codes_of_chat = await self.app.store.creategame.get_all_code_of_chat()
 
-            if text == "/start":
-                await self.handle_start(chat_id)
-            elif text == "/join":
-                await self.handle_join(chat_id, user_id, username)
-            elif text == "/finish_reg":
-                await self.handle_finish_reg(chat_id)
-            elif text.startswith("/choose ") and chat_id in codes_of_chat:
-                await self.handle_choose(chat_id, username, text)
-            elif text.startswith("/answer ") and chat_id in codes_of_chat:
-                await self.handle_answer(chat_id, username, text)
-            elif text == "/help":
-                await self.handle_help(chat_id)
-        except Exception as e:
-            logging.error(f"Error handling update: {e}")
-            await self.tg_client.send_message(
-                chat_id,
-                "An error occurred while processing your command. Please try again or use /help for guidance."
-            )
+        if text == "/start":
+            await self.handle_start(chat_id)
+        elif text == "/join":
+            await self.handle_join(chat_id, user_id, username)
+        elif text == "/finish_reg":
+            await self.handle_finish_reg(chat_id)
+        elif text.startswith("/choose ") and chat_id in codes_of_chat:
+            await self.handle_choose(chat_id, username, text)
+        elif text.startswith("/answer ") and chat_id in codes_of_chat:
+            await self.handle_answer(chat_id, username, text)
+        elif text == "/help":
+            await self.handle_help(chat_id)
+        elif text == "/stat":
+            await self.print_statictics(chat_id)
 
     async def handle_answer(self, chat_id: int, username: str, text: str):
         answer = text.split("/answer ", 1)[1].strip()
@@ -131,6 +130,23 @@ class Worker:
 
     async def handle_help(self, chat_id: int):
         await self.tg_client.send_message(chat_id, HELP_TEXT)
+
+    async def print_statictics(self, chat_id: int):
+        codes = await self.app.store.creategame.get_all_code_of_chat()
+        if chat_id in codes:
+            if await self.app.store.creategame.is_game_working(chat_id):
+                await self.tg_client.send_message(
+                    chat_id, GAME_IN_PROGRESS_TEXT
+                )
+                return
+            score_team = (
+                await self.app.store.creategame.get_points_awarded_by_chat_id(
+                    chat_id
+                )
+            )
+            await self.tg_client.send_message(
+                chat_id, STATISTICS_TEXT.format(score_team=score_team)
+            )
 
     async def _worker(self):
         try:

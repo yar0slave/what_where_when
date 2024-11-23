@@ -25,12 +25,11 @@ class GameRegistration:
         message = REGISTRATION_START_TEXT.format(max_players=self.max_players)
         await self.tg_client.send_message(self.chat_id, message)
 
-    async def add_player(
-            self, user_id: int, username: str
-    ) -> bool:
-
+    async def add_player(self, user_id: int, username: str) -> bool:
         players = await self.app.store.users.get_users_by_chat_id(self.chat_id)
-        registration_open = not (await self.app.store.creategame.is_captain_set(self.chat_id))
+        registration_open = not (
+            await self.app.store.creategame.is_captain_set(self.chat_id)
+        )
         if not registration_open:
             await self.tg_client.send_message(
                 self.chat_id, REGISTRATION_CLOSED_TEXT
@@ -62,7 +61,9 @@ class GameRegistration:
         return True
 
     async def finish_registration(self) -> bool:
-        registration_open = not (await self.app.store.creategame.is_captain_set(self.chat_id))
+        registration_open = not (
+            await self.app.store.creategame.is_captain_set(self.chat_id)
+        )
         if not registration_open:
             await self.tg_client.send_message(
                 self.chat_id, REGISTRATION_ALREADY_CLOSED_TEXT
@@ -72,14 +73,13 @@ class GameRegistration:
         players = await self.app.store.users.get_users_by_chat_id(self.chat_id)
         captain = random.choice(list(players))
 
-        await self.app.store.creategame.create_or_update_game(code_of_chat=self.chat_id, captain_id=captain)
+        await self.app.store.creategame.create_or_update_game(
+            code_of_chat=self.chat_id, captain_id=captain
+        )
 
-        players_list = [
-            f"👑 Капитан @{captain}"
+        players_list = [f"👑 Капитан @{captain}"] + [
+            f"👤 Игрок: @{player}" for player in players if player != captain
         ]
-        for player in players:
-            if player != captain:
-                players_list.append(f"👤 Игрок: @{player.username}")
 
         final_message = REGISTRATION_FINISHED_TEXT.format(
             players_list="\n".join(players_list),

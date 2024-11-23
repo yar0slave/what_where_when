@@ -1,7 +1,6 @@
 import asyncio
 import typing
 
-
 from app.store.database import Database
 
 if typing.TYPE_CHECKING:
@@ -10,10 +9,12 @@ if typing.TYPE_CHECKING:
 
 class Store:
     def __init__(self, app: "Application"):
+        from app.store.bot.accessor import (
+            GameAccessor,
+            QuizAccessor,
+            UserAccessor,
+        )
         from app.store.bot.base import Bot
-        from app.store.bot.accessor import UserAccessor
-        from app.store.bot.accessor import GameAccessor
-        from app.store.bot.accessor import QuizAccessor
 
         self.app = app
         self.users = UserAccessor(app)

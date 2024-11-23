@@ -1,6 +1,6 @@
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import BigInteger, ForeignKey, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy import BigInteger
+
 
 class BaseModel(DeclarativeBase):
     pass
@@ -13,12 +13,12 @@ class Questions(BaseModel):
     question: Mapped[str] = mapped_column(
         String, nullable=False, comment="Вопрос"
     )
-    answer: Mapped[str] = mapped_column(
-        String, nullable=False, comment="Ответ"
-    )
+    answer: Mapped[str] = mapped_column(String, nullable=False, comment="Ответ")
 
     asked_questions: Mapped[list["AskedQuestions"]] = relationship(
-        "AskedQuestions", back_populates="question_rel", cascade="all, delete-orphan"
+        "AskedQuestions",
+        back_populates="question_rel",
+        cascade="all, delete-orphan",
     )
 
 
@@ -40,7 +40,9 @@ class AskedQuestions(BaseModel):
     question_rel: Mapped["Questions"] = relationship(
         "Questions", back_populates="asked_questions"
     )
-    game: Mapped["Game"] = relationship("Game", back_populates="asked_questions")
+    game: Mapped["Game"] = relationship(
+        "Game", back_populates="asked_questions"
+    )
 
 
 class Game(BaseModel):
@@ -49,7 +51,7 @@ class Game(BaseModel):
     code_of_chat: Mapped[int] = mapped_column(
         BigInteger,
         primary_key=True,
-        comment="Как бы тоже айдишник, но тот который создает тг"
+        comment="Как бы тоже айдишник, но тот который создает тг",
     )
     captain_id: Mapped[str | None] = mapped_column(
         String, nullable=True, comment="Идентификатор капитана команды"
@@ -67,6 +69,10 @@ class Game(BaseModel):
     )
     respondent_id: Mapped[str | None] = mapped_column(
         String, nullable=True, comment="Идентификатор ответчика команды"
+    )
+
+    is_working: Mapped[int | None] = mapped_column(
+        nullable=True, comment="активен ли игра в данный момент"
     )
 
     asked_questions: Mapped[list["AskedQuestions"]] = relationship(
