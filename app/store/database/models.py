@@ -83,12 +83,11 @@ class Game(BaseModel):
 class Users(BaseModel):
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    user_id: Mapped[str] = mapped_column(
-        String, nullable=False, comment="Идентификатор участника команды"
-    )
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)  # айдишник пользователя в БД
+    int_user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, comment="Айдишник пользователя в Telegram")
+    user_id: Mapped[str] = mapped_column(String, nullable=False, comment="Имя пользователя в Telegram")
     chat_id: Mapped[int] = mapped_column(
         ForeignKey("game.code_of_chat", ondelete="CASCADE"),
         nullable=False,
-        comment="Идентификатор чата команды",
+        comment="Идентификатор чата команды"
     )

@@ -1,8 +1,8 @@
-"""ьщку
+"""message describing the changes
 
-Revision ID: a05a8e6614c7
+Revision ID: 7cae220a2809
 Revises: 
-Create Date: 2024-11-23 03:06:39.628772
+Create Date: 2024-11-28 02:19:14.505503
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'a05a8e6614c7'
+revision = '7cae220a2809'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -31,6 +31,7 @@ def upgrade() -> None:
     sa.Column('question_id', sa.Integer(), nullable=True, comment='Вопрос, задаваемый в раунде'),
     sa.Column('round_number', sa.Integer(), nullable=True, comment='Номер раунда'),
     sa.Column('respondent_id', sa.String(), nullable=True, comment='Идентификатор ответчика команды'),
+    sa.Column('is_working', sa.Integer(), nullable=True, comment='активен ли игра в данный момент'),
     sa.ForeignKeyConstraint(['question_id'], ['questions.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('code_of_chat')
     )
@@ -44,7 +45,8 @@ def upgrade() -> None:
     )
     op.create_table('users',
     sa.Column('id', sa.BigInteger(), nullable=False),
-    sa.Column('user_id', sa.String(), nullable=False, comment='Идентификатор участника команды'),
+    sa.Column('int_user_id', sa.BigInteger(), nullable=False, comment='Айдишник пользователя в Telegram'),
+    sa.Column('user_id', sa.String(), nullable=False, comment='Имя пользователя в Telegram'),
     sa.Column('chat_id', sa.BigInteger(), nullable=False, comment='Идентификатор чата команды'),
     sa.ForeignKeyConstraint(['chat_id'], ['game.code_of_chat'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')

@@ -88,9 +88,7 @@ class Statistics:
             await self.tg_client.send_message(self.chat_id, NOT_YOUR_TURN_TEXT)
             return False
 
-        await self.app.store.creategame.create_or_update_game(
-            code_of_chat=self.chat_id, respondent_id=None
-        )
+        await (self.app.store.creategame.reset_respondent_id(code_of_chat=self.chat_id))
 
         question = await self.app.store.creategame.get_question_by_chat_id(
             self.chat_id
