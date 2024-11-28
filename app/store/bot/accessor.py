@@ -9,7 +9,7 @@ from app.store.database.models import AskedQuestions, Game, Questions, Users
 
 class QuizAccessor(BaseAccessor):
     async def create_question(
-            self, question_text: str, answer_text: str
+        self, question_text: str, answer_text: str
     ) -> Questions:
         async with self.app.database.session() as session:
             try:
@@ -24,7 +24,7 @@ class QuizAccessor(BaseAccessor):
                 return question
 
     async def get_random_unasked_question(
-            self, chat_id: int
+        self, chat_id: int
     ) -> Questions | None:
         async with self.app.database.session() as session:
             try:
@@ -61,7 +61,7 @@ class QuizAccessor(BaseAccessor):
                 return question
 
     async def mark_question_as_asked(
-            self, chat_id: int, question_id: int
+        self, chat_id: int, question_id: int
     ) -> None:
         async with self.app.database.session() as session:
             asked_question = AskedQuestions(
@@ -78,9 +78,7 @@ class QuizAccessor(BaseAccessor):
 
     async def check_answer(self, question_id: int, user_answer: str) -> bool:
         async with self.app.database.session() as session:
-            query = select(Questions.answer).where(
-                Questions.id == question_id
-            )
+            query = select(Questions.answer).where(Questions.id == question_id)
             result = await session.execute(query)
             correct_answer = result.scalar_one_or_none()
 
@@ -89,8 +87,7 @@ class QuizAccessor(BaseAccessor):
                 return False
 
             is_correct = (
-                    correct_answer.strip().lower()
-                    == user_answer.strip().lower()
+                correct_answer.strip().lower() == user_answer.strip().lower()
             )
             self.logger.info(
                 "Ответ %s для вопроса id=%s.",
@@ -102,20 +99,21 @@ class QuizAccessor(BaseAccessor):
 
     async def list_questions(self) -> list[Questions]:
         async with self.app.database.session() as session:
-                query = select(Questions)
-                result = await session.execute(query)
-                questions = result.scalars().all()
-                return list(questions)
+            query = select(Questions)
+            result = await session.execute(query)
+            questions = result.scalars().all()
+            return list(questions)
 
 
 class UserAccessor(BaseAccessor):
-    async def join_user(self, int_user_id: int, username: str, chat_id: int)\
-            -> Users:
+    async def join_user(
+        self, int_user_id: int, username: str, chat_id: int
+    ) -> Users:
         async with self.app.database.session() as session:
             user = Users(
                 int_user_id=int_user_id,  # Telegram ID пользователя
                 user_id=username,  # Имя пользователя
-                chat_id=chat_id  # Идентификатор чата
+                chat_id=chat_id,  # Идентификатор чата
             )
 
             session.add(user)
@@ -132,17 +130,16 @@ class UserAccessor(BaseAccessor):
 
 class GameAccessor(BaseAccessor):
     async def create_or_update_game(
-            self,
-            code_of_chat: int,
-            captain_id: str | None,
-            points_awarded: int | None,
-            question_id: int | None,
-            round_number: int | None,
-            respondent_id: str | None,
-            is_working: int | None,
+        self,
+        code_of_chat: int,
+        captain_id: str | None,
+        points_awarded: int | None,
+        question_id: int | None,
+        round_number: int | None,
+        respondent_id: str | None,
+        is_working: int | None,
     ) -> Game:
         async with self.app.database.session() as session:
-
             # Пытаемся найти существующую запись
             query = select(Game).where(Game.code_of_chat == code_of_chat)
             result = await session.execute(query)
@@ -189,9 +186,7 @@ class GameAccessor(BaseAccessor):
             # Выполняем SELECT для получения всех code_of_chat
             query = select(Game.code_of_chat)
             result = await session.execute(query)
-            return (
-                result.scalars().all()
-            )
+            return result.scalars().all()
 
     async def is_captain_set(self, code_of_chat: int) -> bool:
         async with self.app.database.session() as session:
@@ -205,7 +200,6 @@ class GameAccessor(BaseAccessor):
 
     async def get_game_by_chat_id(self, code_of_chat: int) -> Game | None:
         async with self.app.database.session() as session:
-
             # Создаём запрос для поиска игры по code_of_chat
             query = select(Game).where(Game.code_of_chat == code_of_chat)
             result = await session.execute(query)
@@ -225,7 +219,6 @@ class GameAccessor(BaseAccessor):
 
     async def get_round_number_by_chat_id(self, code_of_chat: int) -> int:
         async with self.app.database.session() as session:
-
             query = select(Game.round_number).where(
                 Game.code_of_chat == code_of_chat
             )
@@ -247,7 +240,7 @@ class GameAccessor(BaseAccessor):
             return round_number
 
     async def set_round_number(
-            self, code_of_chat: int, round_number: int
+        self, code_of_chat: int, round_number: int
     ) -> None:
         async with self.app.database.session() as session:
             # Проверяем, существует ли запись с указанным code_of_chat
@@ -280,28 +273,28 @@ class GameAccessor(BaseAccessor):
         self, question_text: str, code_of_chat: int
     ) -> None:
         async with self.app.database.session() as session:
-                query = select(Questions.id).where(
-                    Questions.question == question_text
-                )
-                result = await session.execute(query)
-                question_id = result.scalar_one_or_none()
+            query = select(Questions.id).where(
+                Questions.question == question_text
+            )
+            result = await session.execute(query)
+            question_id = result.scalar_one_or_none()
 
-                update_query = (
-                    update(Game)
-                    .where(Game.code_of_chat == code_of_chat)
-                    .values(question_id=question_id)
-                )
-                await session.execute(update_query)
-                await session.commit()
+            update_query = (
+                update(Game)
+                .where(Game.code_of_chat == code_of_chat)
+                .values(question_id=question_id)
+            )
+            await session.execute(update_query)
+            await session.commit()
 
-                self.logger.info(
-                    "Вопрос с id=%s назначен игре с code_of_chat=%s.",
-                    question_id,
-                    code_of_chat,
-                )
+            self.logger.info(
+                "Вопрос с id=%s назначен игре с code_of_chat=%s.",
+                question_id,
+                code_of_chat,
+            )
 
     async def get_respondent_id_by_chat_id(
-            self, code_of_chat: int
+        self, code_of_chat: int
     ) -> str | None:
         async with self.app.database.session() as session:
             # Запрос для получения respondent_id
@@ -321,10 +314,9 @@ class GameAccessor(BaseAccessor):
             return None
 
     async def get_question_by_chat_id(
-            self, code_of_chat: int
+        self, code_of_chat: int
     ) -> Questions | None:
         async with self.app.database.session() as session:
-
             # Запрос с присоединением таблицы Questions
             query = (
                 select(Questions)
@@ -350,7 +342,6 @@ class GameAccessor(BaseAccessor):
     async def get_points_awarded_by_chat_id(self, code_of_chat: int) -> int:
         try:
             async with self.app.database.session() as session:
-
                 # Запрос для получения points_awarded
                 query = select(Game.points_awarded).where(
                     Game.code_of_chat == code_of_chat
@@ -380,7 +371,7 @@ class GameAccessor(BaseAccessor):
             return points_awarded
 
     async def clear_game_users_and_asked_questions(
-            self, code_of_chat: int
+        self, code_of_chat: int
     ) -> None:
         async with self.app.database.session() as session:
             # Удаляем связанные записи из asked_questions

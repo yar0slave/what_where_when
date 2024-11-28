@@ -11,42 +11,38 @@ class QuestionAddView(View):
     async def post(self):
         try:
             if not self.data:
-                raise HTTPBadRequest(text='No data provided')
+                raise HTTPBadRequest(text="No data provided")
 
-            if 'question' not in self.data or 'answer' not in self.data:
-                raise HTTPBadRequest(text='Question and answer are required')
+            if "question" not in self.data or "answer" not in self.data:
+                raise HTTPBadRequest(text="Question and answer are required")
 
             await self.store.quiz.create_question(
                 question_text=self.data["question"],
-                answer_text=self.data["answer"]
+                answer_text=self.data["answer"],
             )
 
-            return json_response(data={
-                "question": self.data["question"],
-                "answer": self.data["answer"]
-            })
+            return json_response(
+                data={
+                    "question": self.data["question"],
+                    "answer": self.data["answer"],
+                }
+            )
 
         except Exception as e:
-            return json_response(
-                status=500,
-                data={'error': str(e)}
-            )
+            return json_response(status=500, data={"error": str(e)})
 
 
 class QuestionListView(View):
     async def get(self):
         try:
             questions = await self.store.quiz.list_questions()
-            return json_response(data={
-                "questions": [
-                    {
-                        "question": q.question,
-                        "answer": q.answer
-                    } for q in questions
-                ]
-            })
-        except Exception as e:
             return json_response(
-                status=500,
-                data={'error': str(e)}
+                data={
+                    "questions": [
+                        {"question": q.question, "answer": q.answer}
+                        for q in questions
+                    ]
+                }
             )
+        except Exception as e:
+            return json_response(status=500, data={"error": str(e)})

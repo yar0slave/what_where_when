@@ -44,18 +44,21 @@ class Worker:
 
     async def handle_start(self, chat_id: int):
         codes = await self.app.store.creategame.get_all_code_of_chat()
-        if (chat_id in codes and
-                await self.app.store.creategame.is_game_working(chat_id)):
+        if chat_id in codes and await self.app.store.creategame.is_game_working(
+            chat_id
+        ):
             await self.tg_client.send_message(chat_id, GAME_IN_PROGRESS_TEXT)
             return
 
         await self.app.store.creategame.clear_game_users_and_asked_questions(
-            chat_id)
+            chat_id
+        )
         await self.app.store.creategame.create_or_update_game(
             code_of_chat=chat_id, is_working=1
         )
         self.games[chat_id] = GameRegistration(
-            self.tg_client, chat_id, self.app)
+            self.tg_client, chat_id, self.app
+        )
         await self.games[chat_id].start_registration()
 
     async def handle_join(self, chat_id: int, user_id: int, username: str):
@@ -136,17 +139,18 @@ class Worker:
     async def print_statictics(self, chat_id: int):
         codes = await self.app.store.creategame.get_all_code_of_chat()
         if chat_id in codes:
-            if await self.app.store.creategame.is_game_working(
-                    chat_id):
+            if await self.app.store.creategame.is_game_working(chat_id):
                 await self.tg_client.send_message(
-                    chat_id, GAME_IN_PROGRESS_TEXT)
+                    chat_id, GAME_IN_PROGRESS_TEXT
+                )
                 return
 
             score_team = await (
-                self.app.store.creategame.get_points_awarded_by_chat_id(chat_id))
-            await (
-                self.tg_client.send_message(chat_id, STATISTICS_TEXT.format(
-                    score_team=score_team)))
+                self.app.store.creategame.get_points_awarded_by_chat_id(chat_id)
+            )
+            await self.tg_client.send_message(
+                chat_id, STATISTICS_TEXT.format(score_team=score_team)
+            )
 
     async def _worker(self):
         try:
