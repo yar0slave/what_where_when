@@ -2,7 +2,7 @@ from sqlalchemy import delete, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.future import select
 from sqlalchemy.sql.expression import func
-from typing import Optional
+
 from app.base.base_accessor import BaseAccessor
 from app.store.database.models import AskedQuestions, Game, Questions, Users
 
@@ -100,9 +100,17 @@ class QuizAccessor(BaseAccessor):
 
             return is_correct
 
+    async def list_questions(self) -> list[Questions]:
+        async with self.app.database.session() as session:
+                query = select(Questions)
+                result = await session.execute(query)
+                questions = result.scalars().all()
+                return list(questions)
+
 
 class UserAccessor(BaseAccessor):
-    async def join_user(self, int_user_id: int, username: str, chat_id: int) -> Users:
+    async def join_user(self, int_user_id: int, username: str, chat_id: int)\
+            -> Users:
         async with self.app.database.session() as session:
             user = Users(
                 int_user_id=int_user_id,  # Telegram ID пользователя
@@ -119,50 +127,48 @@ class UserAccessor(BaseAccessor):
         async with self.app.database.session() as session:
             query = select(Users.user_id).where(Users.chat_id == chat_id)
             result = await session.execute(query)
-            usernames = result.scalars().all()
-
-            return usernames
+            return result.scalars().all()
 
 
 class GameAccessor(BaseAccessor):
     async def create_or_update_game(
             self,
             code_of_chat: int,
-            captain_id: Optional[str] = None,
-            points_awarded: Optional[int] = None,
-            question_id: Optional[int] = None,
-            round_number: Optional[int] = None,
-            respondent_id: Optional[str] = None,
-            is_working: Optional[int] = None,
+            captain_id: str | None,
+            points_awarded: int | None,
+            question_id: int | None,
+            round_number: int | None,
+            respondent_id: str | None,
+            is_working: int | None,
     ) -> Game:
-            async with self.app.database.session() as session:
+        async with self.app.database.session() as session:
 
-                # Пытаемся найти существующую запись
-                query = select(Game).where(Game.code_of_chat == code_of_chat)
-                result = await session.execute(query)
-                game = result.scalar_one_or_none()
+            # Пытаемся найти существующую запись
+            query = select(Game).where(Game.code_of_chat == code_of_chat)
+            result = await session.execute(query)
+            game = result.scalar_one_or_none()
 
-                if game:
-                    # Обновляем только переданные параметры
-                    for key, value in locals().items():
-                        if hasattr(game, key) and value is not None:
-                            setattr(game, key, value)
-                else:
-                    # Создаём новую запись, если не найдено
-                    game = Game(
-                        code_of_chat=code_of_chat,
-                        captain_id=captain_id,
-                        points_awarded=points_awarded,
-                        question_id=question_id,
-                        round_number=round_number,
-                        respondent_id=respondent_id,
-                        is_working=is_working,
-                    )
-                    session.add(game)
+            if game:
+                # Обновляем только переданные параметры
+                for key, value in locals().items():
+                    if hasattr(game, key) and value is not None:
+                        setattr(game, key, value)
+            else:
+                # Создаём новую запись, если не найдено
+                game = Game(
+                    code_of_chat=code_of_chat,
+                    captain_id=captain_id,
+                    points_awarded=points_awarded,
+                    question_id=question_id,
+                    round_number=round_number,
+                    respondent_id=respondent_id,
+                    is_working=is_working,
+                )
+                session.add(game)
 
-                await session.commit()
+            await session.commit()
 
-            return game
+        return game
 
     async def reset_respondent_id(self, code_of_chat: int) -> bool:
         async with self.app.database.session() as session:
@@ -183,11 +189,9 @@ class GameAccessor(BaseAccessor):
             # Выполняем SELECT для получения всех code_of_chat
             query = select(Game.code_of_chat)
             result = await session.execute(query)
-            code_of_chat_list = (
+            return (
                 result.scalars().all()
-            )  # Получаем список значений
-
-            return code_of_chat_list
+            )
 
     async def is_captain_set(self, code_of_chat: int) -> bool:
         async with self.app.database.session() as session:
@@ -196,11 +200,8 @@ class GameAccessor(BaseAccessor):
                 Game.code_of_chat == code_of_chat
             )
             result = await session.execute(query)
-            captain_id = (
-                result.scalar_one_or_none()
-            )  # Получаем значение или None
 
-            return captain_id
+            return result.scalar_one_or_none()
 
     async def get_game_by_chat_id(self, code_of_chat: int) -> Game | None:
         async with self.app.database.session() as session:
@@ -317,6 +318,7 @@ class GameAccessor(BaseAccessor):
                     respondent_id,
                 )
                 return respondent_id
+            return None
 
     async def get_question_by_chat_id(
             self, code_of_chat: int
