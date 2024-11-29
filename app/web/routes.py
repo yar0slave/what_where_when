@@ -1,9 +1,11 @@
-from aiohttp.web_app import Application
+import typing
 
-__all__ = ("setup_routes",)
+if typing.TYPE_CHECKING:
+    from app.web.app import Application
 
 
-def setup_routes(application: Application):
-    import app.users.routes
+def setup_routes(app: "Application"):
+    from app.web.views.views import QuestionAddView, QuestionListView
 
-    app.users.routes.register_urls(application)
+    app.router.add_view("/add_question", QuestionAddView)
+    app.router.add_view("/questions", QuestionListView)
