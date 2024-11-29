@@ -3,6 +3,7 @@ from aiohttp.web import (
     Request as AiohttpRequest,
     View as AiohttpView,
 )
+from aiohttp_apispec import setup_aiohttp_apispec
 
 from app.store import Database, Store, setup_store
 from app.web.config import setup_config
@@ -53,4 +54,7 @@ def setup_app() -> Application:
     setup_config(app)
     setup_routes(app)
     setup_store(app)
+    setup_aiohttp_apispec(
+        app, title="WhatWhereWhen Bot", url="/docs/json", swagger_path="/docs"
+    )
     return app

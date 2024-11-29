@@ -129,43 +129,44 @@ class UserAccessor(BaseAccessor):
 
 
 class GameAccessor(BaseAccessor):
-    async def create_or_update_game(
-        self,
-        code_of_chat: int,
-        captain_id: str | None,
-        points_awarded: int | None,
-        question_id: int | None,
-        round_number: int | None,
-        respondent_id: str | None,
-        is_working: int | None,
-    ) -> Game:
+    async def create_or_update_game(self, **kwargs) -> Game:
         async with self.app.database.session() as session:
-            # Пытаемся найти существующую запись
-            query = select(Game).where(Game.code_of_chat == code_of_chat)
-            result = await session.execute(query)
-            game = result.scalar_one_or_none()
+            try:
+                code_of_chat = kwargs.get(
+                    "code_of_chat", None
+                )  # Проверяем наличие code_of_chat
+                if code_of_chat is None:
+                    raise ValueError(
+                        "Поле code_of_chat обязательно для создания записи"
+                    )
 
-            if game:
-                # Обновляем только переданные параметры
-                for key, value in locals().items():
-                    if hasattr(game, key) and value is not None:
-                        setattr(game, key, value)
+                # Пытаемся найти существующую запись
+                query = select(Game).where(Game.code_of_chat == code_of_chat)
+                result = await session.execute(query)
+                game = result.scalar_one_or_none()
+
+                if game:
+                    # Обновляем только переданные параметры
+                    for key, value in kwargs.items():
+                        if hasattr(game, key):
+                            setattr(game, key, value)
+                else:
+                    # Создаём новую запись, если не найдено
+                    game = Game(**kwargs)
+                    session.add(game)
+
+                await session.commit()
+
+            except IntegrityError as e:
+                await session.rollback()
+                self.logger.error("Ошибка при работе с таблицей game: %s", e)
+                raise
+            except Exception as e:
+                await session.rollback()
+                self.logger.error("Общая ошибка: %s", e)
+                raise
             else:
-                # Создаём новую запись, если не найдено
-                game = Game(
-                    code_of_chat=code_of_chat,
-                    captain_id=captain_id,
-                    points_awarded=points_awarded,
-                    question_id=question_id,
-                    round_number=round_number,
-                    respondent_id=respondent_id,
-                    is_working=is_working,
-                )
-                session.add(game)
-
-            await session.commit()
-
-        return game
+                return game
 
     async def reset_respondent_id(self, code_of_chat: int) -> bool:
         async with self.app.database.session() as session:

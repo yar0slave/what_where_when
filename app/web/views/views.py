@@ -1,13 +1,16 @@
 from aiohttp.web import HTTPBadRequest, json_response
-from aiohttp_apispec import request_schema, response_schema
+from aiohttp_apispec import request_schema, response_schema, docs
 
 from app.web.app import View
-from app.web.schema import QuestionSchema
+from app.web.schema import QuestionSchema, QuestionListRequestSchema
 
 
 class QuestionAddView(View):
     @request_schema(QuestionSchema)
     @response_schema(QuestionSchema)
+    @docs(tags=['add'],
+          summary='add question',
+          description='Test method add question')
     async def post(self):
         try:
             if not self.data:
@@ -33,6 +36,11 @@ class QuestionAddView(View):
 
 
 class QuestionListView(View):
+    @request_schema(QuestionListRequestSchema)
+    @response_schema(QuestionListRequestSchema)
+    @docs(tags=['get'],
+          summary=' get all questions',
+          description='Test method get all questions')
     async def get(self):
         try:
             questions = await self.store.quiz.list_questions()
